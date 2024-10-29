@@ -4,6 +4,7 @@ lib/config.h
 test/benchmark
 test/test_base64
 build/
+.vscode/
 # visual studio symbol db, etc.
 .vs/
 # build directory used by CMakePresets
