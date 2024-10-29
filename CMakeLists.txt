@@ -71,6 +71,9 @@ add_feature_info(NEON32 BASE64_WITH_NEON32 "add NEON32 codepath")
 cmake_dependent_option(BASE64_WITH_NEON64 "add NEON64 codepath" ON _TARGET_ARCH_arm64 OFF)
 add_feature_info(NEON64 BASE64_WITH_NEON64 "add NEON64 codepath")
 
+cmake_dependent_option(BASE64_WITH_RVV "add RVV codepath" ON _TARGET_ARCH_riscv OFF)
+add_feature_info(RVV BASE64_WITH_RVV "add RVV codepath")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
@@ -124,6 +127,8 @@ add_library(base64
 
     lib/arch/neon32/codec.c
     lib/arch/neon64/codec.c
+    
+    lib/arch/rvv/codec.c
 )
 
 target_include_directories(base64

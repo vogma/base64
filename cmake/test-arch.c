@@ -30,6 +30,9 @@
     || defined(_M_IX86)
 #error ##arch=x86##
 
+#elif defined(__riscv) && __riscv_xlen == 64
+#error ##arch=riscv##
+
 #else
 #error ##arch=unknown##
 #endif

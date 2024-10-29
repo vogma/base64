@@ -3,7 +3,7 @@ bin/base64
 lib/config.h
 test/benchmark
 test/test_base64
-
+build/
 # visual studio symbol db, etc.
 .vs/
 # build directory used by CMakePresets
