@@ -100,6 +100,7 @@ BASE64_CODEC_FUNCS(ssse3)
 BASE64_CODEC_FUNCS(sse41)
 BASE64_CODEC_FUNCS(sse42)
 BASE64_CODEC_FUNCS(avx)
+BASE64_CODEC_FUNCS(rvv)
 
 static bool
 codec_choose_forced (struct codec *codec, int flags)
@@ -157,6 +158,11 @@ codec_choose_forced (struct codec *codec, int flags)
 		codec->dec = base64_stream_decode_avx512;
 		return true;
 	}
+	if (flags & BASE64_FORCE_RVV) {
+		codec->enc = base64_stream_encode_rvv;
+		codec->dec = base64_stream_decode_rvv;
+		return true;
+	}
 	return false;
 }
 
@@ -176,6 +182,21 @@ codec_choose_arm (struct codec *codec)
 	codec->enc = base64_stream_encode_neon32;
 	codec->dec = base64_stream_decode_neon32;
 	#endif
+
+	return true;
+
+#else
+	(void)codec;
+	return false;
+#endif
+}
+
+static bool
+codec_choose_rvv (struct codec *codec)
+{
+#if defined(__riscv)  && HAVE_RVV
+	codec->enc = base64_stream_encode_rvv;
+	codec->dec = base64_stream_decode_rvv;
 
 	return true;
 
@@ -307,6 +328,9 @@ codec_choose (struct codec *codec, int flags)
 		return;
 	}
 	if (codec_choose_x86(codec)) {
+		return;
+	}
+	if(codec_choose_rvv(codec)){
 		return;
 	}
 	codec->enc = base64_stream_encode_plain;
