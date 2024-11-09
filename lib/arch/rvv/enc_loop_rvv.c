@@ -82,7 +82,7 @@ BASE64_FORCE_INLINE vuint8m4_t table_lookup_m4(vuint8m4_t vec_indices, vint8m1_t
     return __riscv_vreinterpret_v_i8m4_u8m4(ascii_vec);
 }
 
-static void enc_loop_rvv(const uint8_t **s, size_t *slen, uint8_t **o, size_t *olen)
+static BASE64_FORCE_INLINE void enc_loop_rvv(const uint8_t **s, size_t *slen, uint8_t **o, size_t *olen)
 {
     size_t vl;
 
