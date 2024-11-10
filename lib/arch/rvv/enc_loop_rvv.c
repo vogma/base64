@@ -84,9 +84,16 @@ BASE64_FORCE_INLINE vuint8m4_t table_lookup_m4(vuint8m4_t vec_indices, vint8m1_t
 
 static BASE64_FORCE_INLINE void enc_loop_rvv(const uint8_t **s, size_t *slen, uint8_t **o, size_t *olen)
 {
+    size_t vlmax_e8m4 = __riscv_vsetvlmax_e8m4();
+    size_t input_slice_e8m4 = (vlmax_e8m4 / 4) * 3;
+
+    if (*slen < input_slice_e8m4)
+    {
+        return;
+    }
+
     size_t vl;
 
-    size_t vlmax_e8m4 = __riscv_vsetvlmax_e8m4();
     size_t vlmax_e8m1 = __riscv_vsetvlmax_e8m1();
 
     // const vuint8m1_t vec_index_e8m1 = __riscv_vle8_v_u8m1(gather_index_lmul4, vlmax_e8m1);
@@ -95,7 +102,6 @@ static BASE64_FORCE_INLINE void enc_loop_rvv(const uint8_t **s, size_t *slen, ui
     vint8m1_t offset_vec = __riscv_vmv_v_x_i8m1(0, vlmax_e8m1);
     offset_vec = __riscv_vle8_v_i8m1(offsets, (sizeof(offsets) / sizeof(offsets[0])));
 
-    size_t input_slice_e8m4 = (vlmax_e8m4 / 4) * 3;
     size_t input_slice_e8m1 = (vlmax_e8m1 / 4) * 3;
 
     for (; *slen >= input_slice_e8m4; *slen -= input_slice_e8m4)
