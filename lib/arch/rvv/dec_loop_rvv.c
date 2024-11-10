@@ -15,7 +15,7 @@ static const uint8_t index_decode[66] = {
  * creates the indices for the decode gather, if VLEN > 512 bit.
  * Index pattern: 2, 1, 0, 6, 5 ,4, 10, 9, 8, ...
  */
-vuint8m1_t createGatherIndexDecode_rvv(size_t vl)
+static BASE64_FORCE_INLINE vuint8m1_t createGatherIndexDecode_rvv(size_t vl)
 {
     size_t index_size = vl / 3 + 1;
     uint8_t indices[index_size];
@@ -29,7 +29,7 @@ vuint8m1_t createGatherIndexDecode_rvv(size_t vl)
     return __riscv_vle8_v_u8m1(indices, vl);
 }
 
-vuint8m1_t createDecodeIndices_rvv(size_t vl)
+static BASE64_FORCE_INLINE vuint8m1_t createDecodeIndices_rvv(size_t vl)
 {
     if (vl <= (512 / 8))
     {
