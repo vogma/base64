@@ -13,21 +13,21 @@ const uint8_t index_decode[66] = {
 
 #define NO_ERROR -1
 
-const int8_t LOWER_INVALID = 1;
-const int8_t UPPER_INVALID = 1;
+const int8_t LOWER_INVALID_RVV = 1;
+const int8_t UPPER_INVALID_RVV = 1;
 
-const int8_t lower_bound_lut[16] =
-    {LOWER_INVALID, LOWER_INVALID, 0x2B, 0x30,
+const int8_t lower_bound_lut_rvv[16] =
+    {LOWER_INVALID_RVV, LOWER_INVALID_RVV, 0x2B, 0x30,
      0x41, 0x50, 0x61, 0x70,
-     LOWER_INVALID, LOWER_INVALID, LOWER_INVALID, LOWER_INVALID,
-     LOWER_INVALID, LOWER_INVALID, LOWER_INVALID, LOWER_INVALID};
+     LOWER_INVALID_RVV, LOWER_INVALID_RVV, LOWER_INVALID_RVV, LOWER_INVALID_RVV,
+     LOWER_INVALID_RVV, LOWER_INVALID_RVV, LOWER_INVALID_RVV, LOWER_INVALID_RVV};
 
-const int8_t upper_bound_lut[16] =
+const int8_t upper_bound_lut_rvv[16] =
     {
-        UPPER_INVALID, UPPER_INVALID, 0x2b, 0x39,
+        UPPER_INVALID_RVV, UPPER_INVALID_RVV, 0x2b, 0x39,
         0x4f, 0x5a, 0x6f, 0x7a,
-        UPPER_INVALID, UPPER_INVALID, UPPER_INVALID, UPPER_INVALID,
-        UPPER_INVALID, UPPER_INVALID, UPPER_INVALID, UPPER_INVALID};
+        UPPER_INVALID_RVV, UPPER_INVALID_RVV, UPPER_INVALID_RVV, UPPER_INVALID_RVV,
+        UPPER_INVALID_RVV, UPPER_INVALID_RVV, UPPER_INVALID_RVV, UPPER_INVALID_RVV};
 
 /**
  * creates the indices for the decode gather, if VLEN > 512 bit.
@@ -75,8 +75,8 @@ static BASE64_FORCE_INLINE void dec_loop_rvv(const uint8_t **s, size_t *slen, ui
     vint8m1_t vec_shift_lut = __riscv_vmv_v_x_i8m1(0, vlmax_8);
     vec_shift_lut = __riscv_vle8_v_i8m1(shift_lut, sizeof(shift_lut) / sizeof(shift_lut[0]));
 
-    const vint8m1_t vec_upper_lut = __riscv_vle8_v_i8m1(upper_bound_lut, vlmax_e8m1);
-    const vint8m1_t vec_lower_lut = __riscv_vle8_v_i8m1(lower_bound_lut, vlmax_e8m1);
+    const vint8m1_t vec_upper_lut = __riscv_vle8_v_i8m1(upper_bound_lut_rvv, vlmax_e8m1);
+    const vint8m1_t vec_lower_lut = __riscv_vle8_v_i8m1(lower_bound_lut_rvv, vlmax_e8m1);
 
     for (; *slen >= vlmax_8; *slen -= vlmax_8)
     {
