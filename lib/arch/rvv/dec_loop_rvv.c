@@ -1,15 +1,33 @@
-static const int8_t shift_lut[16] = {
+const int8_t shift_lut[16] = {
     /* 0 */ 0x00, /* 1 */ 0x00, /* 2 */ 0x3e - 0x2b, /* 3 */ 0x34 - 0x30,
     /* 4 */ 0x00 - 0x41, /* 5 */ 0x0f - 0x50, /* 6 */ 0x1a - 0x61, /* 7 */ 0x29 - 0x70,
     /* 8 */ 0x00, /* 9 */ 0x00, /* a */ 0x00, /* b */ 0x00,
     /* c */ 0x00, /* d */ 0x00, /* e */ 0x00, /* f */ 0x00};
 
-static const uint8_t index_decode[66] = {
+const uint8_t index_decode[66] = {
     2, 1, 0, 6, 5, 4, 10, 9, 8, 14, 13, 12, 18, 17, 16, 22, 21, 20,
     26, 25, 24, 30, 29, 28, 34, 33, 32, 38, 37, 36, 42, 41, 40,
     46, 45, 44, 50, 49, 48, 54, 53, 52, 58, 57, 56, 62, 61, 60,
     66, 65, 64, 70, 69, 68, 74, 73, 72, 78, 77, 76, 82, 81, 80,
     86, 85, 84};
+
+#define NO_ERROR -1
+
+const int8_t LOWER_INVALID = 1;
+const int8_t UPPER_INVALID = 1;
+
+const int8_t lower_bound_lut[16] =
+    {LOWER_INVALID, LOWER_INVALID, 0x2B, 0x30,
+     0x41, 0x50, 0x61, 0x70,
+     LOWER_INVALID, LOWER_INVALID, LOWER_INVALID, LOWER_INVALID,
+     LOWER_INVALID, LOWER_INVALID, LOWER_INVALID, LOWER_INVALID};
+
+const int8_t upper_bound_lut[16] =
+    {
+        UPPER_INVALID, UPPER_INVALID, 0x2b, 0x39,
+        0x4f, 0x5a, 0x6f, 0x7a,
+        UPPER_INVALID, UPPER_INVALID, UPPER_INVALID, UPPER_INVALID,
+        UPPER_INVALID, UPPER_INVALID, UPPER_INVALID, UPPER_INVALID};
 
 /**
  * creates the indices for the decode gather, if VLEN > 512 bit.
@@ -57,36 +75,38 @@ static BASE64_FORCE_INLINE void dec_loop_rvv(const uint8_t **s, size_t *slen, ui
     vint8m1_t vec_shift_lut = __riscv_vmv_v_x_i8m1(0, vlmax_8);
     vec_shift_lut = __riscv_vle8_v_i8m1(shift_lut, sizeof(shift_lut) / sizeof(shift_lut[0]));
 
+    const vint8m1_t vec_upper_lut = __riscv_vle8_v_i8m1(upper_bound_lut, vlmax_e8m1);
+    const vint8m1_t vec_lower_lut = __riscv_vle8_v_i8m1(lower_bound_lut, vlmax_e8m1);
+
     for (; *slen >= vlmax_8; *slen -= vlmax_8)
     {
         vint8m2_t data_reg = __riscv_vle8_v_i8m2((const signed char *)*s, vlmax_8);
 
         size_t vlmax_8 = __riscv_vsetvlmax_e8m2();
 
-        // const vint8m1_t vec_shift_lut = __riscv_vle8_v_i8m2(lookup_vlen8_m2, vlmax_8);
-
         // extract higher nibble from 8-bit data
         vuint8m2_t higher_nibble = __riscv_vsrl_vx_u8m2(__riscv_vreinterpret_v_i8m2_u8m2(data_reg), 4, vlmax_8);
 
-        // vint8m1_t upper_bound = __riscv_vrgather_vv_i8m1(vec_upper_lut, higher_nibble, vlmax_8);
-        // vint8m1_t lower_bound = __riscv_vrgather_vv_i8m1(vec_lower_lut, higher_nibble, vlmax_8);
+        vint8m2_t upper_bound = __riscv_vcreate_v_i8m1_i8m2(
+            __riscv_vrgather_vv_i8m1(vec_upper_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 0), vlmax_e8m1),
+            __riscv_vrgather_vv_i8m1(vec_upper_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 1), vlmax_e8m1));
 
-        // vbool8_t lower = __riscv_vmslt_vv_i8m1_b8(data, lower_bound, vlmax_8);
-        // vbool8_t higher = __riscv_vmsgt_vv_i8m1_b8(data, upper_bound, vlmax_8);
+        vint8m2_t lower_bound = __riscv_vcreate_v_i8m1_i8m2(
+            __riscv_vrgather_vv_i8m1(vec_lower_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 0), vlmax_e8m1),
+            __riscv_vrgather_vv_i8m1(vec_lower_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 1), vlmax_e8m1));
+
+        vbool4_t lower = __riscv_vmslt_vv_i8m2_b4(data_reg, lower_bound, vlmax_8);
+        vbool4_t higher = __riscv_vmsgt_vv_i8m2_b4(data_reg, upper_bound, vlmax_8);
         vbool4_t eq = __riscv_vmseq_vx_i8m2_b4(data_reg, 0x2f, vlmax_8);
 
-        // vbool8_t or = __riscv_vmor_mm_b8(lower, higher, vlmax_8);
-        // vbool8_t outside = __riscv_vmandn_mm_b8(eq, or, vlmax_8);
+        vbool4_t or = __riscv_vmor_mm_b4(lower, higher, vlmax_8);
+        vbool4_t outside = __riscv_vmandn_mm_b4(or, eq, vlmax_8);
 
-        // int error = __riscv_vfirst_m_b8(outside, vlmax_8);
-
-        // if (error != NO_ERROR)
-        // {
-        //     printf("ERROR!\n");
-        // }
-
-        // vint8m1_t shift = __riscv_vrgather_vv_i8m1(vec_shift_lut, higher_nibble, vlmax_8);
-
+        int error = __riscv_vfirst_m_b4(outside, vlmax_8);
+        if (error != NO_ERROR)
+        {
+            break;
+        }
         vlmax_8 = __riscv_vsetvlmax_e8m1();
         vint8m2_t shift = __riscv_vcreate_v_i8m1_i8m2(__riscv_vrgather_vv_i8m1(vec_shift_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 0), vlmax_8), __riscv_vrgather_vv_i8m1(vec_shift_lut, __riscv_vget_v_u8m2_u8m1(higher_nibble, 1), vlmax_8));
 
